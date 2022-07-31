@@ -58,3 +58,9 @@ def iou(pred_boxes, true_boxes, format="corner"):
     b2_area = abs((b2x2 - b2x1) * (b2y2 - b2y1))
 
     return intersection / (b1_area + b2_area - intersection)
+
+
+def iou_wh(boxes1, boxes2):
+    intersection = torch.min(boxes1[..., 0], boxes2[..., 0]) * torch.min(boxes1[..., 1], boxes2[..., 1])
+    union = boxes1[..., 0] * boxes1[..., 1] + boxes2[..., 0] * boxes2[..., 1] - intersection
+    return intersection / union

@@ -32,6 +32,7 @@ class ResBlock(nn.Module):
                 CNNBlock(in_channels // 2, in_channels , kernel_size=3, padding=1)
             )]
         self.use_res = use_res
+        self.num_repeats = num_repeats
 
 
     def forward(self, x):
@@ -43,7 +44,7 @@ class ResBlock(nn.Module):
 class Prediction(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
-        self.pred = nn.Sequention(
+        self.pred = nn.Sequential(
             CNNBlock(in_channels, in_channels*2, kernel_size=3, padding=1),
             CNNBlock(in_channels*2, 3 * (num_classes + 5), bn_act=False, kernel_size=1, padding=0)
 
@@ -66,15 +67,16 @@ class Yolov3(nn.Module):
         self.in_channels = in_channels
         self.layers = self._create_layers()
 
-    def forward(self):
+    def forward(self, x):
         outputs = []
         skips = []
 
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
             if isinstance(layer, Prediction):
                 outputs.append(layer(x))
                 continue
 
+            print(f"In {i}th layer")
             x = layer(x)
 
             if isinstance(layer, ResBlock) and layer.num_repeats == 8:
@@ -107,11 +109,12 @@ class Yolov3(nn.Module):
                 )
             elif isinstance(module, str):
                 if module == "P":
-                    layers.append([
+                    layers += [
                         ResBlock(in_channels, use_res=False, num_repeats=1),
                         CNNBlock(in_channels, in_channels // 2, kernel_size=1),
-                        Prediction(in_channels // 2, num_classes=num_classes)
-                    ])
+                        Prediction(in_channels // 2, num_classes=self.num_classes)
+                        ]
+                    in_channels = in_channels // 2
                 elif module == "U":
                     layers.append(nn.Upsample(
                         scale_factor=2, mode="bilinear"
